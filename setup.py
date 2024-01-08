@@ -9,7 +9,7 @@ try:
 
     here = os.path.abspath(os.path.dirname(__file__))
     readmefile = os.path.join(here, 'README.md')
-    readme = pypandoc.convert(readmefile, 'rst', encoding='utf-8')
+    readme = pypandoc.convert_file(readmefile, 'rst', encoding='utf-8')
     readme = readme.replace('\r', '')
 except ImportError:
     readme = 'see README.md'
