@@ -26,21 +26,27 @@ class KeyctlWrapperException(Exception):
 class KeyNotExistError(KeyctlWrapperException):
     def __init__(self, message=None, keyid=None, keyname=None):
         if message is None:
-            message = 'Key {} does not exit in kernel keyring.'.format(self._getkeydesc(keyid, keyname))
+            message = 'Key {} does not exit in kernel keyring.'.format(
+                self._getkeydesc(keyid, keyname)
+                )
         super(KeyNotExistError, self).__init__(message)
 
 
 class KeyAlreadyExistError(KeyctlWrapperException):
     def __init__(self, message=None, keyid=None, keyname=None):
         if message is None:
-            message = 'Key {} already exists in kernel keyring.'.format(self._getkeydesc(keyid, keyname))
+            message = 'Key {} already exists in kernel keyring.'.format(
+                self._getkeydesc(keyid, keyname)
+                )
         super(KeyAlreadyExistError, self).__init__(message)
 
 
 class KeyctlOperationError(KeyctlWrapperException):
     def __init__(self, message=None, keyid=None, keyname=None, errmsg=None):
         if message is None:
-            message = 'Operation on key {} failed. ErrorMsg:{}'.format(self._getkeydesc(keyid, keyname), errmsg)
+            message = 'Operation on key {} failed. ErrorMsg:{}'.format(
+                self._getkeydesc(keyid, keyname), errmsg
+                )
         super(KeyctlOperationError, self).__init__(message)
 
 
@@ -58,14 +64,15 @@ class KeyctlWrapper(object):
     default_keyring = '@u'
     default_keytype = 'user'
 
-    def __init__(self, keyring: str=default_keyring, keytype: str=default_keytype):
+    def __init__(self, keyring: str = default_keyring,
+                 keytype: str = default_keytype):
         self.keyring = keyring
         self.keytype = keytype
 
     # ---------------------------------------------------------------
 
     @staticmethod
-    def _system(args, data: str=None, check=True):
+    def _system(args, data: str = None, check=True):
 
         try:
             p = subprocess.Popen(
@@ -77,7 +84,9 @@ class KeyctlWrapper(object):
                 text=True,
             )
         except OSError as e:
-            raise OSError('Command \'{}\' execution failed. ErrMsg:{}'.format(' '.join(args), e))
+            raise OSError('Command \'{}\' execution failed. ErrMsg:{}'.format(
+                ' '.join(args), e)
+                )
 
         if data is None:
             (out, err) = p.communicate()
@@ -91,21 +100,28 @@ class KeyctlWrapper(object):
         elif ret == 0:
             return out
         else:
-            raise KeyctlOperationError(errmsg='({}){} {}'.format(ret, err, out))
+            raise KeyctlOperationError(errmsg='({}){} {}'.format(
+                ret, err, out)
+                )
 
     # ---------------------------------------------------------------
 
     def get_all_key_ids(self) -> List[int]:
         out = self._system(['keyctl', 'rlist', self.keyring])
-        l = out.split()
-        l = [int(x) for x in l]
-        return l
+        keylist = out.split()
+        keylist = [int(x) for x in keylist]
+        return keylist
 
     # ---------------------------------------------------------------
 
     def get_id_from_name(self, name: str) -> int:
-        # ret, out, err = self._system(['keyctl', 'request', self.keytype, name], check=False)
-        ret, out, err = self._system(['keyctl', 'search', self.keyring, self.keytype, name], check=False)
+        ret, out, err = self._system([
+            'keyctl',
+            'search',
+            self.keyring,
+            self.keytype,
+            name],
+            check=False)
 
         if ret != 0:
             raise KeyNotExistError(keyname=name)
@@ -117,7 +133,8 @@ class KeyctlWrapper(object):
     # ---------------------------------------------------------------
 
     def get_name_from_id(self, keyid: int) -> str:
-        ret, out, err = self._system(['keyctl', 'rdescribe', str(keyid)], check=False)
+        ret, out, err = self._system(['keyctl', 'rdescribe', str(keyid)],
+                                     check=False)
 
         if ret != 0:
             raise KeyNotExistError(keyid=keyid)
@@ -136,7 +153,8 @@ class KeyctlWrapper(object):
         else:
             raise AttributeError('mode must be one of [\'raw\', \'hex\'].')
 
-        ret, out, err = self._system(['keyctl', kmode, str(keyid)], check=False)
+        ret, out, err = self._system(['keyctl', kmode, str(keyid)],
+                                     check=False)
 
         if ret == 1:
             raise KeyNotExistError(keyid=keyid)
@@ -158,7 +176,13 @@ class KeyctlWrapper(object):
         except KeyNotExistError:
             pass
 
-        out = self._system(['keyctl', 'padd', self.keytype, name, self.keyring], data)
+        out = self._system([
+            'keyctl',
+            'padd',
+            self.keytype,
+            name,
+            self.keyring],
+            data)
         keyid = int(out)
 
         return keyid
@@ -166,22 +190,27 @@ class KeyctlWrapper(object):
     # ---------------------------------------------------------------
 
     def update_key(self, keyid: int, data):
-        ret, out, err = self._system(['keyctl', 'pupdate', str(keyid)], data, check=False)
+        ret, out, err = self._system(['keyctl', 'pupdate', str(keyid)], data,
+                                     check=False)
 
         if ret == 1:
             raise KeyNotExistError(keyid=keyid)
         elif ret != 0:
-            raise KeyctlOperationError(keyid=keyid, errmsg='({}){}'.format(ret, err))
+            raise KeyctlOperationError(keyid=keyid, errmsg='({}){}'.format(
+                ret, err)
+                )
 
     # ---------------------------------------------------------------
 
     def remove_key(self, keyid: int):
         # revoke first, because unlinking is slow
-        ret, out, err = self._system(['keyctl', 'revoke', str(keyid)], check=False)
+        ret, out, err = self._system(['keyctl', 'revoke', str(keyid)],
+                                     check=False)
         if ret == 1:
             raise KeyNotExistError(keyid=keyid)
         elif ret != 0:
-            raise KeyctlOperationError(keyid=keyid, errmsg='({}){}'.format(ret, err))
+            raise KeyctlOperationError(keyid=keyid, errmsg='({}){}'.format
+                                       (ret, err))
 
         self._system(['keyctl', 'unlink', str(keyid), self.keyring])
 
